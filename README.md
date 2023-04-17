@@ -4,6 +4,24 @@ Make possible create users and login via Telegram, OAuth or OpenID
 
 For OAuth you must create app for certain providers. Login button appear at login page if app id specified. Settings are in "Social login" section of settings page.
 
+## cdp1337 fork changes
+
+This fork contains some fixes for Mastodon authentication as well as identifier changes for incoming usernames.
+
+* Usernames are imported from Mastodon
+* Profile images are imported from Mastodon
+* Groups are imported from Roles in Mastodon
+* Fediverse URL is imported from Mastodon
+* Description/Bio is imported from Mastodon
+
+The identifier update changes the username from "Mastodon-123456789123" to the actual Mastodon username.
+This could cause security issues if you have multiple login sources supported, 
+but works pretty well if you only have one.  For example, my username on Mastodon is "cdp1337" and thus my
+username in NextCloud is also "cdp1337".
+
+Check [the Mastodon documentation](docs/sso/mastodon.md) for details on configuring a Mastodon login provider.
+
+
 ## Installation
 
 Login to your NextCloud installation as an administrator and under "Apps" click "Download and enable" next to the "Social Login" app.

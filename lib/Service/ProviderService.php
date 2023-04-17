@@ -426,10 +426,15 @@ class ProviderService
         if ($provider === 'telegram') {
             $provider = 'tg'; //For backward compatibility
         }
-        $uid = $provider.'-'.$profileId;
-        if (strlen($uid) > 64 || !preg_match('#^[a-z0-9_.@-]+$#i', $profileId)) {
+
+        // @todo Wrap this with a configurable parameter for "pretty" identifiers.
+        //$uid = $provider.'-'.$profileId;
+        $uid = $profileId;
+
+        if (strlen($uid) > 64 || !preg_match('#^[A-Za-z0-9_.@-]+$#i', $profileId)) {
             $uid = $provider.'-'.md5($profileId);
         }
+
         return $this->login($uid, $profile, $provider.'-');
     }
 
@@ -465,7 +470,7 @@ class ProviderService
         }
 
         $updateUserProfile = $this->config->getAppValue($this->appName, 'update_profile_on_login');
-        $userPassword = '';
+        $userPassword = null;
 
         if (null === $user) {
             if ($this->config->getAppValue($this->appName, 'disable_registration')) {
@@ -494,7 +499,11 @@ class ProviderService
 
         if ($updateUserProfile) {
             $user->setDisplayName($profile->displayName ?: $profile->identifier);
-            $user->setSystemEMailAddress((string)$profile->email);
+            $account = $this->accountManager->getAccount($user);
+
+            if ($profile->email) {
+                $user->setSystemEMailAddress((string)$profile->email);
+            }
 
             if ($profile->photoURL) {
                 $curl = new Curl();
@@ -503,6 +512,21 @@ class ProviderService
                     $avatar = $this->avatarManager->getAvatar($user->getUid());
                     $avatar->set($photo);
                 } catch (\Throwable $e) {}
+            }
+
+            if ($profile->description) {
+                $account->getProperty(IAccountManager::PROPERTY_BIOGRAPHY)->setValue($profile->description);
+                $this->accountManager->updateAccount($account);
+            }
+
+            if ($profile->webSiteURL) {
+                $account->getProperty(IAccountManager::PROPERTY_WEBSITE)->setValue($profile->webSiteURL);
+                $this->accountManager->updateAccount($account);
+            }
+
+            if ($profile->profileURL) {
+                $account->getProperty(IAccountManager::PROPERTY_FEDIVERSE)->setValue($profile->profileURL);
+                $this->accountManager->updateAccount($account);
             }
 
             if (isset($profile->data['groups']) && is_array($profile->data['groups'])) {
@@ -566,13 +590,13 @@ class ProviderService
 
         $this->userSession->getSession()->regenerateId();
         $this->userSession->setTokenProvider($this->tokenProvider);
-        $this->userSession->createSessionToken($this->request, $user->getUID(), $user->getUID());
+        $this->userSession->createSessionToken($this->request, $user->getUID(), $user->getUID(), $userPassword);
         $this->userSession->createRememberMeToken($user);
 
         $token = $this->tokenProvider->getToken($this->userSession->getSession()->getId());
         $this->userSession->completeLogin($user, [
             'loginName' => $user->getUID(),
-            'password' => $userPassword,
+            'password' => $userPassword ?: '',
             'token' => $userPassword ? null : $token,
         ], false);
 
